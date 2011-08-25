@@ -1,0 +1,23 @@
+application: exabrot
+version: 1
+runtime: python27
+api_version: 1
+
+handlers:
+- url: /exabrot.dzi
+  static_files: static/exabrot.dzi
+  upload: static/exabrot.dzi
+  mime_type: text/xml
+- url: /static/seadragon.min.js
+  static_files: static/seadragon-min.js
+  upload: static/seadragon-min.js
+- url: /images
+  static_dir: static/images
+- url: /.*
+  script: main.application
+
+libraries:
+- name: PIL
+  version: latest
+- name: numpy
+  version: latest

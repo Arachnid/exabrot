@@ -1,0 +1,28 @@
+
+<html> 
+<head> 
+  <title>Explore the Exabrot</title> 
+  <script type="text/javascript" src="/static/seadragon-min.js"></script> 
+  <script type="text/javascript"> 
+    var viewer = null;
+    function init() {
+      Seadragon.Config.imagePath = '/images/'
+      viewer = new Seadragon.Viewer("map");
+      viewer.openDzi("exabrot.dzi");
+    }
+    Seadragon.Utils.addEvent(window, "load", init);
+  </script> 
+  <style type="text/css"> 
+    #map {
+      width: 600px;
+      height: 600px;
+      background-color: black;
+      border: 1px solid black;
+      color: white;
+    }
+  </style> 
+</head> 
+<body> 
+  <div id="map"></div> 
+</body> 
+</html> 
