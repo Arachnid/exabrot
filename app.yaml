@@ -2,6 +2,7 @@ application: exabrot
 version: 1
 runtime: python27
 api_version: 1
+thread_safe: true
 
 handlers:
 - url: /exabrot.dzi
