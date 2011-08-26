@@ -75,9 +75,9 @@ def render_tile(level, x, y):
   tilesize = 1 << min(TILE_SIZE_BITS, level)
   logging.info("Generating tile with w=%d, h=%d, xmin = %f, ymin = %f, xsize = %f, ysize = %f",
                tilesize, tilesize, xmin, ymin, xsize, ysize)
-  img = mandelbrot(tilesize, tilesize, LIMIT, xmin, xmin + xsize,
+  img, cost = mandelbrot(tilesize, tilesize, LIMIT, xmin, xmin + xsize,
                    ymin, ymin + ysize, ESCAPE)
-  return Image.fromarray(img)
+  return Image.fromarray(img), cost
 
 def mandelbrot(n, m, itermax, xmin, xmax, ymin, ymax, escape):
     '''
@@ -91,6 +91,7 @@ def mandelbrot(n, m, itermax, xmin, xmax, ymin, ymax, escape):
     
     Courtesy http://thesamovar.wordpress.com/2009/03/22/fast-fractals-with-python-and-numpy/
     '''
+    cost = 0
     ix, iy = numpy.mgrid[0:n, 0:m]
     x = numpy.linspace(xmin, xmax, n)[ix]
     y = numpy.linspace(ymin, ymax, m)[iy]
@@ -104,6 +105,7 @@ def mandelbrot(n, m, itermax, xmin, xmax, ymin, ymax, escape):
     for i in xrange(itermax):
         if not len(z):
           break
+        cost += len(z)
         numpy.multiply(z, z, z)
         numpy.add(z, c, z)
         rem = abs(z) > escape
@@ -117,4 +119,4 @@ def mandelbrot(n, m, itermax, xmin, xmax, ymin, ymax, escape):
         z = z[rem]
         ix, iy = ix[rem], iy[rem]
         c = c[rem]
-    return img
+    return img, cost
