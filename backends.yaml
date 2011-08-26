@@ -2,4 +2,3 @@ backends:
 - name: renderer
   class: B8
   instances: 5
-  options: dynamic

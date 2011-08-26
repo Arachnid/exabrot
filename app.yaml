@@ -12,10 +12,14 @@ handlers:
 - url: /static/seadragon.min.js
   static_files: static/seadragon-min.js
   upload: static/seadragon-min.js
+- url: /benchmark.html
+  static_files: static/benchmark.html
+  upload: static/benchmark.html
 - url: /images
   static_dir: static/images
 - url: /.*
   script: main.application
+  login: admin
 
 libraries:
 - name: PIL

@@ -1,6 +1,9 @@
 import colorsys
+import itertools
 import logging
 import numpy
+import time
+from concurrent import futures
 from PIL import Image
 
 TILE_SIZE_BITS = 8
@@ -13,7 +16,8 @@ XMIN = -2.0 # Xmin for entire set
 XMAX = 1.0 # Xmax for entire set
 YMIN = -1.5 # Ymin for entire set
 YMAX = 1.5 # Ymax for entire set
-
+NUM_THREADS = 4
+NUM_STRIPES = 16
 
 def interpolate_palette(points, pos):
   # Find the two points that we're interpolating between
@@ -75,48 +79,79 @@ def render_tile(level, x, y):
   tilesize = 1 << min(TILE_SIZE_BITS, level)
   logging.info("Generating tile with w=%d, h=%d, xmin = %f, ymin = %f, xsize = %f, ysize = %f",
                tilesize, tilesize, xmin, ymin, xsize, ysize)
-  img, cost = mandelbrot(tilesize, tilesize, LIMIT, xmin, xmin + xsize,
-                   ymin, ymin + ysize, ESCAPE)
-  return Image.fromarray(img), cost
 
-def mandelbrot(n, m, itermax, xmin, xmax, ymin, ymax, escape):
-    '''
-    Fast mandelbrot computation using numpy.
+  with futures.ThreadPoolExecutor(max_workers=NUM_THREADS) as executor:
+    calculator = MandelbrotCalculator(tilesize, tilesize, LIMIT, xmin, xsize,
+                                      ymin, ysize, ESCAPE, NUM_STRIPES)
+    tasks = [executor.submit(calculator.mandelbrot, i) for i in range(NUM_STRIPES)]
+    futures.wait(tasks)
+    return Image.fromarray(calculator.img), calculator.opcount
 
-    (n, m) are the output image dimensions
-    itermax is the maximum number of iterations to do
-    xmin, xmax, ymin, ymax specify the region of the
-    set to compute.
-    escape is the value at which a cell is said to have escaped
-    
-    Courtesy http://thesamovar.wordpress.com/2009/03/22/fast-fractals-with-python-and-numpy/
-    '''
-    cost = 0
-    ix, iy = numpy.mgrid[0:n, 0:m]
-    x = numpy.linspace(xmin, xmax, n)[ix]
-    y = numpy.linspace(ymin, ymax, m)[iy]
-    c = x + complex(0, 1) * y
-    del x, y
-    img = numpy.zeros((n, m, 3), dtype=numpy.uint8)
-    ix.shape = n*m
-    iy.shape = n*m
-    c.shape = n*m
-    z = numpy.copy(c)
-    for i in xrange(itermax):
+class MandelbrotCalculator(object):
+  def __init__(self, n, m, itermax, xmin, xsize, ymin, ysize, escape, numstripes):
+    self.n = n
+    self.m = m
+    self.itermax = itermax
+    self.xmin = xmin
+    self.xsize = xsize
+    self.ymin = ymin
+    self.ysize = ysize
+    self.escape = escape
+    self.numstripes = numstripes
+    self.stripe_height = ysize / numstripes
+    self.pixel_height = m / numstripes
+    self._opcount = []
+    self.img = numpy.zeros((n, m, 3), dtype=numpy.uint8)
+
+  def mandelbrot(self, stripe_num):
+      '''
+      Fast mandelbrot computation using numpy.
+
+      (n, m) are the output image dimensions
+      itermax is the maximum number of iterations to do
+      xmin, xmax, ymin, ymax specify the region of the
+      set to compute.
+      escape is the value at which a cell is said to have escaped
+      
+      Courtesy http://thesamovar.wordpress.com/2009/03/22/fast-fractals-with-python-and-numpy/
+      '''
+      n = self.n
+      m = self.m / self.numstripes
+      xmin = self.xmin
+      xmax = self.xmin + self.xsize
+      ymin = self.ymin + self.stripe_height * stripe_num
+      ymax = self.ymin + self.stripe_height * (stripe_num + 1)
+      
+      cost = 0
+      ix, iy = numpy.mgrid[0:n, 0:m]
+      x = numpy.linspace(xmin, xmax, n)[ix]
+      y = numpy.linspace(ymin, ymax, m)[iy]
+      c = x + complex(0, 1) * y
+      del x, y
+      img = numpy.zeros((n, m, 3), dtype=numpy.uint8)
+      ix.shape = n * m
+      iy.shape = n * m
+      c.shape = n * m
+      z = numpy.copy(c)
+      for i in xrange(self.itermax):
         if not len(z):
           break
         cost += len(z)
         numpy.multiply(z, z, z)
         numpy.add(z, c, z)
-        rem = abs(z) > escape
+        rem = abs(z) > self.escape
         
         smooth_index = i + 1 - numpy.log2(numpy.log(abs(z[rem])))
         smooth_index *= PALETTE_STEP
         smooth_index %= PALETTE_SIZE
-        img[iy[rem], ix[rem]] = palette[smooth_index.astype(int)]
+        self.img[iy[rem] + self.pixel_height * stripe_num, ix[rem]] = palette[smooth_index.astype(int)]
 
         rem = -rem
         z = z[rem]
         ix, iy = ix[rem], iy[rem]
         c = c[rem]
-    return img, cost
+      self._opcount.append(cost)
+
+  @property
+  def opcount(self):
+    return sum(self._opcount)

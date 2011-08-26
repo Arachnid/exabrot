@@ -15,6 +15,11 @@ from webapp2_extras import jinja2
 import mandelbrot
 import models
 
+# Disable autoflush, for now
+from google.appengine.api.logservice import logservice
+logservice.AUTOFLUSH_ENABLED = False
+
+
 class BaseHandler(webapp2.RequestHandler):
   @webapp2.cached_property
   def jinja2(self):
