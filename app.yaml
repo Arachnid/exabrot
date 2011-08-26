@@ -19,7 +19,6 @@ handlers:
   static_dir: static/images
 - url: /.*
   script: main.application
-  login: admin
 
 libraries:
 - name: PIL
