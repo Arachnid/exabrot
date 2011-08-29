@@ -61,27 +61,27 @@ palette = numpy.array([
 
 
 def calculate_bounds(level, x, y):
+  tile_level = max(level - TILE_SIZE_BITS, 0) # First n levels are sub-tile sized
+  tilesize = 1 << min(TILE_SIZE_BITS, level)
+
   # Size of a tile in mandelbrot coordinates
-  xsize = (XMAX - XMIN) / (1 << level)
-  ysize = (YMAX - YMIN) / (1 << level)
+  xsize = (XMAX - XMIN) / (1 << tile_level)
+  ysize = (YMAX - YMIN) / (1 << tile_level)
   
   # Top left tile coordinate
   xmin = XMIN + xsize * x
   ymin = YMIN + ysize * y
   
-  return xmin, ymin, xsize, ysize
+  return xmin, ymin, xsize, ysize, tilesize
   
 
-def render_tile(level, x, y):
-  """Render a mandelbrot set tile."""
-  tile_level = max(level - TILE_SIZE_BITS, 0) # First n levels are sub-tile sized
-  xmin, ymin, xsize, ysize = calculate_bounds(tile_level, x, y)
-  tilesize = 1 << min(TILE_SIZE_BITS, level)
-  logging.info("Generating tile with w=%d, h=%d, xmin = %f, ymin = %f, xsize = %f, ysize = %f",
-               tilesize, tilesize, xmin, ymin, xsize, ysize)
+def render_tile(xmin, xsize, ymin, ysize, width, height):
+  """Render a mandelbrot set image with the specified parameters."""
+  logging.info("Generating image with w=%d, h=%d, xmin = %f, ymin = %f, xsize = %f, ysize = %f",
+               width, height, xmin, ymin, xsize, ysize)
 
   with futures.ThreadPoolExecutor(max_workers=NUM_THREADS) as executor:
-    calculator = MandelbrotCalculator(tilesize, tilesize, LIMIT, xmin, xsize,
+    calculator = MandelbrotCalculator(width, height, LIMIT, xmin, xsize,
                                       ymin, ysize, ESCAPE, NUM_STRIPES)
     tasks = [executor.submit(calculator.mandelbrot, i) for i in range(NUM_STRIPES)]
     futures.wait(tasks)

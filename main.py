@@ -4,6 +4,7 @@ import datetime
 import logging
 import os
 import time
+import urllib
 import urlparse
 import webapp2
 from google.appengine.api import backends
@@ -42,37 +43,35 @@ class TileHandler(BaseHandler):
     tile_key = models.CachedTile.key_for_tile('exabrot', level, x, y)
     cached_tile = tile_key.get()
     if not cached_tile:
-      url = urlparse.urljoin(backends.get_url('renderer'),
-                             '/backend/render_tile/%s/%s/%s' % (level, x, y))
-      response = urlfetch.fetch(url, deadline=10.0)
-      cached_tile = cPickle.loads(response.content)
+      cached_tile = self.render_tile(int(level), int(x), int(y))
+      cached_tile.put()
     self.response.write(cached_tile.tile)
 
-
-class BackendTileHandler(BaseHandler):
-  def get(self, level, x, y):
-    start = time.time()
-    image, operation_cost = mandelbrot.render_tile(int(level), int(x), int(y))
-    elapsed = time.time() - start
-    logging.info("Tile required %d operations, completing in %.2f seconds.",
-                 operation_cost, elapsed)
-    imagedata = cStringIO.StringIO()
-    image.save(imagedata, 'PNG')
-
-    tile_key = models.CachedTile.key_for_tile('exabrot', level, x, y)
-    cached_tile = models.CachedTile(
-        key=tile_key,
-        tile=imagedata.getvalue(),
+  def render_tile(self, level, x, y):
+    xmin, ymin, xsize, ysize, tilesize = mandelbrot.calculate_bounds(
+        level, x, y)
+    params = urllib.urlencode({
+        'xmin': xmin,
+        'ymin': ymin,
+        'xsize': xsize,
+        'ysize': ysize,
+        'width': tilesize,
+        'height': tilesize,
+    })
+    url = urlparse.urljoin(backends.get_url('renderer'),
+                           '/backend/render_tile?%s' % params)
+    response = urlfetch.fetch(url, deadline=10.0)
+    assert response.status_code == 200
+    return models.CachedTile(
+        key=models.CachedTile.key_for_tile('exabrot', level, x, y),
+        tile=response.content,
         rendered=datetime.datetime.utcnow(),
-        operation_cost=operation_cost,
-        render_time=elapsed,
-        level=int(level))
-    cached_tile.put()
-    self.response.out.write(cPickle.dumps(cached_tile))
+        operation_cost=int(response.headers['X-Operation-Cost']),
+        render_time=float(response.headers['X-Render-Time']),
+        level=level)
 
 
 application = webapp2.WSGIApplication([
     ('/', IndexHandler),
     ('/exabrot_files/(\d+)/(\d+)_(\d+).png', TileHandler),
-    ('/backend/render_tile/(\d+)/(\d+)/(\d+)', BackendTileHandler),
 ], debug=True)

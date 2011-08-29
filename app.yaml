@@ -17,6 +17,9 @@ handlers:
   upload: static/benchmark.html
 - url: /images
   static_dir: static/images
+- url: /backend/.*
+  script: api.application
+  login: admin
 - url: /.*
   script: main.application
 
