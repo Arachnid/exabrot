@@ -8,7 +8,7 @@ from PIL import Image
 
 TILE_SIZE_BITS = 8
 TILE_SIZE = 1 << TILE_SIZE_BITS # Length of a side of a tile
-LIMIT = 512   # Max mandelbrot iterations
+LIMIT = 256   # Max mandelbrot iterations
 ESCAPE = 4.0  # Value at which a cell is said to have escaped
 PALETTE_SIZE = 1024 # Number of elements in palette
 PALETTE_STEP = 15.0 # Rate to step through the palette
