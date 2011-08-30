@@ -40,26 +40,36 @@ class IndexHandler(BaseHandler):
 
 
 @tasklets.tasklet
-def ndb_map(func, seq, num_tasklets):
-  """Calls `func(*x)` on each element x in `seq`."""
-  seq = enumerate(seq)
-  results = []
+def ndb_map(func, inputs, num_tasklets):
+  """Calls `func(*x)` on each element `x` in `inputs`.
+  
+  Args:
+    func: A function to call on each element.
+    inputs: A list or tuple of input elements.
+    num_tasklets: The number of parallel tasklets to use.
+  Returns:
+    A list of results.
+  """
+  # Wrap inputs in an enumeration so we know which element we are processing
+  seq = enumerate(inputs)
+  # Preallocate result array based on input length
+  results = [None] * len(inputs)
 
   @tasklets.tasklet
   def mapper_task():
     while True:
-      try:
-        task_num, element = seq.next()
-      except EOFError:
-        raise tasklets.Return()
-      result = yield func(*element)
-      results.append((task_num, result))
+      # Fetch the next element to process.
+      # We don't have to catch StopIteration here, because it will simply cause
+      # this function to return, as desired.
+      task_num, element = seq.next()
+      # Call the mapper function
+      results[task_num] = yield func(*element)
 
+  # Start the required number of mapper tasks and wait for them to complete.
   tasks = [mapper_task() for x in range(num_tasklets)]
   yield tasks
 
-  results.sort()
-  raise tasklets.Return([x[1] for x in results])
+  raise tasklets.Return(results)
 
 
 class TileHandler(BaseHandler):
