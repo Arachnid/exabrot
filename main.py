@@ -146,11 +146,17 @@ class TileHandler(BaseHandler):
         'width': width,
         'height': height,
     })
-    url = urlparse.urljoin(backends.get_url('renderer'),
-                           '/backend/render_tile?%s' % params)
-    rpc = urlfetch.create_rpc(deadline=10.0)
-    urlfetch.make_fetch_call(rpc, url)
-    response = yield rpc
+    for i in range(3): # Retries
+      url = urlparse.urljoin(backends.get_url('renderer'),
+                             '/backend/render_tile?%s' % params)
+      rpc = urlfetch.create_rpc(deadline=10.0)
+      urlfetch.make_fetch_call(rpc, url)
+      response = yield rpc
+      if response.status_code != 500:
+        break
+      logging.warn("Got 500 from server; retrying.")
+      # Wait a little before retrying
+      time.sleep(0.2)
     assert response.status_code == 200, \
         "Expected status 200, got %s" % response.status_code
     raise tasklets.Return(
