@@ -1,4 +1,4 @@
 backends:
 - name: renderer
   class: B4
-  instances: 10
+  instances: 5
