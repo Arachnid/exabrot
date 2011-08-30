@@ -7,6 +7,7 @@ import urlparse
 import webapp2
 from PIL import Image
 from google.appengine.api import backends
+from google.appengine.api import files
 from google.appengine.api import urlfetch
 from ndb import context, model, tasklets
 from webapp2_extras import jinja2
@@ -36,6 +37,7 @@ class BaseHandler(webapp2.RequestHandler):
 class IndexHandler(BaseHandler):
   def get(self):
     self.render_template('index.html')
+
 
 @tasklets.tasklet
 def ndb_map(func, seq, num_tasklets):
@@ -70,7 +72,7 @@ class TileHandler(BaseHandler):
     if not cached_tile:
       cached_tile = yield self.render_tile(int(level), int(x), int(y))
       cached_tile.put()
-    self.response.write(cached_tile.tile)
+    self.response.headers['X-AppEngine-BlobKey'] = str(cached_tile.tile)
 
   @tasklets.tasklet
   def render_tile(self, level, x, y):
@@ -100,11 +102,20 @@ class TileHandler(BaseHandler):
     # Save the image to the datastore and return it
     logging.info("Rendered tile %s/%s/%s in %.2f seconds with %d operations.",
                  level, x, y, elapsed, operation_cost)
+
     tiledata = cStringIO.StringIO()
     img.save(tiledata, 'PNG')
+
+    write_start = time.time()
+    tile_filename = files.blobstore.create(mime_type='image/png')
+    with files.open(tile_filename, 'a') as f:
+      f.write(tiledata.getvalue())
+    files.finalize(tile_filename)
+    logging.info("Blobstore write took %.2f seconds", time.time() - write_start)
+
     raise tasklets.Return(models.CachedTile(
         key=models.CachedTile.key_for_tile('exabrot', level, x, y),
-        tile=tiledata.getvalue(),
+        tile=files.blobstore.get_blob_key(tile_filename),
         rendered=datetime.datetime.utcnow(),
         operation_cost=operation_cost,
         render_time=elapsed,
