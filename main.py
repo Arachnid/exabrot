@@ -9,6 +9,7 @@ from PIL import Image
 from google.appengine.api import backends
 from google.appengine.api import files
 from google.appengine.api import urlfetch
+from google.appengine.runtime import apiproxy_errors
 from ndb import context, model, tasklets
 from webapp2_extras import jinja2
 
@@ -155,7 +156,8 @@ class TileHandler(BaseHandler):
         response = yield rpc
         if response.status_code not in (500, 0):
           break
-      except urlfetch.DeadlineExceededError:
+      except (apiproxy_errors.DeadlineExceededError,
+              urlfetch.DeadlineExceededError):
         pass
       logging.warn("Backend failed to render tile; retrying")
       # Wait a little before retrying
