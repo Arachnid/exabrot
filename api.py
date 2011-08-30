@@ -1,15 +1,6 @@
-import cPickle
-import cStringIO
-import datetime
 import logging
-import os
 import time
-import urlparse
 import webapp2
-from google.appengine.api import backends
-from google.appengine.api import memcache
-from google.appengine.api import urlfetch
-from ndb import model
 from webapp2_extras import jinja2
 
 import mandelbrot

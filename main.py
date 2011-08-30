@@ -1,15 +1,12 @@
-import cPickle
 import cStringIO
 import datetime
 import logging
-import os
 import time
 import urllib
 import urlparse
 import webapp2
 from PIL import Image
 from google.appengine.api import backends
-from google.appengine.api import memcache
 from google.appengine.api import urlfetch
 from ndb import context, model, tasklets
 from webapp2_extras import jinja2
