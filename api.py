@@ -17,6 +17,7 @@ class BackendTileHandler(webapp2.RequestHandler):
                                 for x in ('xmin', 'xsize', 'ymin', 'ysize'))
     width, height = (int(self.request.GET[x]) for x in ('width', 'height'))
 
+    logging.info("Starting render")
     start = time.time()
     image, operation_cost = mandelbrot.render_tile(xmin, xsize, ymin, ysize,
                                                    width, height)
