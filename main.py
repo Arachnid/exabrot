@@ -151,10 +151,13 @@ class TileHandler(BaseHandler):
                              '/backend/render_tile?%s' % params)
       rpc = urlfetch.create_rpc(deadline=10.0)
       urlfetch.make_fetch_call(rpc, url)
-      response = yield rpc
-      if response.status_code != 500:
-        break
-      logging.warn("Got 500 from server; retrying.")
+      try:
+        response = yield rpc
+        if response.status_code not in (500, 0):
+          break
+      except urlfetch.DeadlineExceededError:
+        pass
+      logging.warn("Backend failed to render tile; retrying")
       # Wait a little before retrying
       time.sleep(0.2)
     assert response.status_code == 200, \
