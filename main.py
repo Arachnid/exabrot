@@ -78,11 +78,10 @@ class TileHandler(BaseHandler):
     self.response.headers['Content-Type'] = 'image/png'
 
     tile_key = models.CachedTile.key_for_tile('exabrot', level, x, y)
-    cached_tile = tile_key.get()
-    if not cached_tile:
-      cached_tile = yield self.render_tile(int(level), int(x), int(y))
-      cached_tile.put()
-    self.response.headers['X-AppEngine-BlobKey'] = str(cached_tile.tile)
+    tile = tile_key.get()
+    if not tile:
+      tile = yield self.render_tile(int(level), int(x), int(y))
+    self.response.headers['X-AppEngine-BlobKey'] = str(tile.tile)
 
   @tasklets.tasklet
   def render_tile(self, level, x, y):
@@ -113,6 +112,12 @@ class TileHandler(BaseHandler):
     logging.info("Rendered tile %s/%s/%s in %.2f seconds with %d operations.",
                  level, x, y, elapsed, operation_cost)
 
+    tile = self.write_tile(level, x, y, operation_cost, elapsed, img)
+    tile.put()
+    raise tasklets.Return(tile)
+
+  def write_tile(self, level, x, y, operation_cost, elapsed, img):
+    """Writes a tile to the blobstore and returns the datastore object."""
     tiledata = cStringIO.StringIO()
     img.save(tiledata, 'PNG')
 
@@ -123,13 +128,13 @@ class TileHandler(BaseHandler):
     files.finalize(tile_filename)
     logging.info("Blobstore write took %.2f seconds", time.time() - write_start)
 
-    raise tasklets.Return(models.CachedTile(
+    return models.CachedTile(
         key=models.CachedTile.key_for_tile('exabrot', level, x, y),
         tile=files.blobstore.get_blob_key(tile_filename),
         rendered=datetime.datetime.utcnow(),
         operation_cost=operation_cost,
         render_time=elapsed,
-        level=level))
+        level=level)
 
   @tasklets.tasklet
   def get_image(self, xmin, ymin, xsize, ysize, width, height):
