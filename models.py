@@ -8,7 +8,7 @@ class CachedTile(model.Model):
   level = model.IntegerProperty(required=True)
 
   #_use_datastore = False
-  #_use_memcache = False
+  _use_memcache = False
 
   @classmethod
   def key_for_tile(cls, type, level, x, y):

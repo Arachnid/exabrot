@@ -9,9 +9,8 @@ handlers:
   static_files: static/exabrot.dzi
   upload: static/exabrot.dzi
   mime_type: text/xml
-- url: /static/seadragon.min.js
-  static_files: static/seadragon-min.js
-  upload: static/seadragon-min.js
+- url: /static
+  static_dir: static
 - url: /benchmark.html
   static_files: static/benchmark.html
   upload: static/benchmark.html

@@ -1,17 +1,41 @@
 
 <html> 
 <head> 
-  <title>Explore the Exabrot</title> 
+  <title>Explore the Exabrot</title>
   <script type="text/javascript" src="/static/seadragon-min.js"></script> 
   <script type="text/javascript"> 
     var viewer = null;
+
+    function get_permalink() {
+      var bounds = viewer.viewport.getBounds();
+      fragment = '#' + [bounds.x, bounds.y, bounds.width, bounds.height];
+      return fragment;
+    }
+
     function init() {
       Seadragon.Config.imagePath = '/images/'
       viewer = new Seadragon.Viewer("map");
       viewer.openDzi("exabrot.dzi");
+      viewer.addEventListener("animationfinish", function(viewer) {
+        document.location.hash = get_permalink();
+      });
+      
+      var fragment = document.location.hash;
+      if(fragment != '#' && fragment != '') {
+        viewer.addEventListener("open", function(viewer) {
+          parts = fragment.substring(1).split(',');
+          viewer.viewport.fitBounds(new Seadragon.Rect(
+              parseFloat(parts[0]),
+              parseFloat(parts[1]),
+              parseFloat(parts[2]),
+              parseFloat(parts[3])
+          ), true);
+        });
+      }
     }
     Seadragon.Utils.addEvent(window, "load", init);
   </script> 
+  <link rel="stylesheet" href="/static/jquery-ui-custom.css" />
   <style type="text/css"> 
     #map {
       width: 600px;
@@ -20,9 +44,43 @@
       border: 1px solid black;
       color: white;
     }
+    .ui-dialog .ui-dialog-titlebar {
+      padding: 0em 0.2em;
+    }
+    .ui-dialog .ui-dialog-title {
+      font-size: 1em;
+    }
   </style> 
 </head> 
 <body> 
+  <h1>Explore the Exabrot</h1>
   <div id="map"></div> 
+  <h2>About the Exabrot</h2>
+  <p>What you see above is an interactive window into a rendering of the
+  <a href="http://en.wikipedia.org/wiki/Mandelbrot_set">Mandelbrot Set</a>. You
+  can explore some of its immense detail with your mouse - zoom with your scroll
+  wheel and pan by grabbing and 'throwing' - and share interesting parts by
+  sending people the URL.</p>
+  <p>Unfortunately, unlike the real mandelbrot set, there's a limit on how deep
+  this demo goes, but it's a big one! Conceptually, you're exploring an enormous
+  image that's just over a billion (10<sup>9</sup>) pixels on a side, meaning
+  the total number of pixels in the (virtual) image is an astonishing
+  10<sup>18</sup> - making the image one exapixel in size - hence the name.</p>
+  
+  <h2>How the Exabrot works</h2>
+  <p>The exabrot is a demonstration of some of the new technologies available in
+  <a href="http://code.google.com/appengine/">Google App Engine</a> with the
+  release of the new Python 2.7 runtime. It demonstrates
+  using the <a href="http://www.pythonware.com/products/pil/">Python Imaging Library</a>
+  and <a href="http://numpy.scipy.org/">NumPy</a>. It also demonstrates how to use
+  multithreaded instances for apps that have high latency, as well as best-practice
+  demonstrations of the new <a href="http://webapp-improved.appspot.com/">webapp2</a>,
+  <a href="http://jinja.pocoo.org/docs/">Jinja2</a> and
+  <a href="http://code.google.com/p/appengine-ndb-experiment/">NDB</a> libraries.</p>
+  
+  <p>The fancy-pants UI is provided by <a href="http://gallery.expression.microsoft.com/SeadragonAjax">Seadragon AJAX.</a></p>
+  
+  <h2>Source Code</h2>
+  <p>You can get the source code <a href="http://github.com/arachnid/exabrot/">here</a>.</p>
 </body> 
 </html> 
