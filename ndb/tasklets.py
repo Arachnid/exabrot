@@ -205,7 +205,7 @@ class Future(object):
       self._callbacks.append((callback, args, kwds))
 
   def set_result(self, result):
-    assert not self._done
+    assert not self._done, (self._result, result)
     self._result = result
     self._done = True
     _state.remove_pending(self)

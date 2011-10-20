@@ -20,6 +20,23 @@
         document.location.hash = get_permalink();
       });
       
+      var linkbutton = new Seadragon.Button(
+        "Permalink",
+        "images/link_rest.png",
+        "images/link_rest.png",
+        "images/link_hover.png",
+        "images/link_click.png",
+        null,
+        function() {
+          var bounds = viewer.viewport.getBounds();
+          var newpath = '/render/' + [bounds.x, bounds.y, bounds.width, bounds.height].join('/')
+          document.location.pathname = newpath;
+        },
+        null,
+        null,
+        null);
+      viewer.addControl(linkbutton.elmt, Seadragon.ControlAnchor.BOTTOM_LEFT);
+      
       var fragment = document.location.hash;
       if(fragment != '#' && fragment != '') {
         viewer.addEventListener("open", function(viewer) {
