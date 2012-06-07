@@ -92,14 +92,17 @@ def render_image(x, y, width, height, px_width):
   total_pixel_width = px_width / width
   level = int(math.ceil(math.log(total_pixel_width, 2)))
   tiles_per_side = (2 ** max(1, level - mandelbrot.TILE_SIZE_BITS))
-  top_left_tile = (int(x * tiles_per_side),
-                   int(y * tiles_per_side))
-  bottom_right_tile = (int(math.ceil((x + width) * tiles_per_side)),
-                       int(math.ceil((y + height) * tiles_per_side)))
+  logging.debug(tiles_per_side)
+  top_left_tile = (max(0, int(x * tiles_per_side)),
+                   max(0, int(y * tiles_per_side)))
+  bottom_right_tile = (min(int(math.ceil((x + width) * tiles_per_side)), tiles_per_side - 1),
+                       min(int(math.ceil((y + height) * tiles_per_side)), tiles_per_side - 1))
 
+  logging.debug((top_left_tile, bottom_right_tile))
   tile_args = [(level, tx, ty)
                for tx in range(top_left_tile[0], bottom_right_tile[0] + 1)
                for ty in range(top_left_tile[1], bottom_right_tile[1] + 1)]
+  logging.debug(tile_args)
   tiles = yield [fetch_or_render_tile(*x) for x in tile_args]
   
   real_width = mandelbrot.TILE_SIZE * (bottom_right_tile[0] - top_left_tile[0])
@@ -118,10 +121,12 @@ def render_image(x, y, width, height, px_width):
 
 @tasklets.tasklet
 def fetch_or_render_tile(level, x, y):
+  logging.debug("Starting render of %r/%r/%r", level, x, y)
   tile_key = models.CachedTile.key_for_tile('exabrot', level, x, y)
-  tile = tile_key.get()
+  tile = yield tile_key.get_async()
   img = None
   if not tile:
+    logging.debug("Tile %r/%r/%r not in cache, fetching...", level, x, y)
     tile, img = yield render_tile(level, x, y)
   raise tasklets.Return(tile, img)
 
@@ -233,6 +238,6 @@ class RenderHandler(BaseHandler):
 
 application = webapp2.WSGIApplication([
     ('/', IndexHandler),
-    ('/render/([0-9.e-]+)/([0-9.e-]+)/([0-9.e-]+)/([0-9.e-]+)\.png', RenderHandler),
+    ('/render/([0-9.e-]+)_([0-9.e-]+)_([0-9.e-]+)_([0-9.e-]+)\.png', RenderHandler),
     ('/exabrot_files/(\d+)/(\d+)_(\d+).png', TileHandler),
 ], debug=True)

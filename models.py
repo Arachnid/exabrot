@@ -13,7 +13,7 @@ class CachedTile(model.Model):
   @property
   def position(self):
     """Returns the level/x/y tuple for this tile."""
-    return tuple(int(x) for x in self.key.id.split('/')[1:])
+    return tuple(int(x) for x in self.key.id().split('/')[1:])
 
   @classmethod
   def key_for_tile(cls, type, level, x, y):
